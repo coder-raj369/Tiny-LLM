@@ -1,0 +1,117 @@
+# Tiny LLM Configuration
+# Phase 0 & 1: Model, Training, Data
+
+model:
+  # Architecture
+  embedding_dim: 192
+  num_layers: 4
+  num_heads: 6
+  context_length: 256
+  vocab_size: 2000
+  dropout: 0.1
+  
+  # Generation
+  max_tokens: 100
+  temperature: 1.0
+  top_k: 40
+
+training:
+  # Hyperparameters
+  batch_size: 32
+  learning_rate: 0.001
+  epochs: 20
+  warmup_steps: 500
+  weight_decay: 0.01
+  
+  # Optimization
+  optimizer: "AdamW"
+  gradient_clip: 1.0
+  
+  # Checkpointing
+  checkpoint_every_steps: 500
+  keep_last_n_checkpoints: 3
+  early_stopping_patience: 3
+  
+  # Device
+  device: "cpu"  # "cpu", "cuda", "mps"
+  mixed_precision: false
+  
+  # Reproducibility
+  seed: 42
+
+inference:
+  # Inference settings
+  max_tokens: 100
+  temperature: 1.0
+  top_k: 40
+  sampling_strategy: "top_k"  # "greedy" or "top_k"
+  timeout_seconds: 5.0
+  
+  # Caching
+  cache_model: true
+
+data:
+  # Data paths
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  
+  # Splits
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  
+  # Processing
+  max_sequence_length: 256
+  min_sequence_length: 10
+  remove_duplicates: true
+  
+  # Domain
+  domain: "quantum_computing"
+
+evaluation:
+  # Evaluation metrics
+  compute_perplexity: true
+  compute_bleu: false
+  compute_semantic_similarity: true
+  compute_custom_metrics: true
+  
+  # Qualitative evaluation
+  qualitative_sample_size: 20
+  rubric:
+    - "correctness"
+    - "clarity"
+    - "coherence"
+  
+  # Baseline comparison
+  compare_to_baseline: true
+  baseline_model: "distilgpt2"
+
+experiment_tracking:
+  # MLflow Configuration
+  backend: "mlflow"  # "mlflow" or "json"
+  tracking_uri: "file://./mlruns"
+  experiment_name: "tiny_llm_v1"
+  
+  # Logging
+  log_metrics_every: 100
+  log_params: true
+  log_artifacts: true
+
+logging:
+  # Logging Configuration
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_dir: "logs"
+  
+api:
+  # API Configuration
+  host: "0.0.0.0"
+  port: 8000
+  reload: false
+  log_level: "info"
+
+paths:
+  checkpoints: "checkpoints"
+  runs: "runs"
+  experiments: "experiments"
+  logs: "logs"
