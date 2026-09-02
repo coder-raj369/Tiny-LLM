@@ -63,7 +63,9 @@ class EvalConfig:
     compute_perplexity: bool = True
     compute_bleu: bool = False
     compute_semantic_similarity: bool = True
+    compute_custom_metrics: bool = True
     qualitative_sample_size: int = 20
+    rubric: tuple[str, ...] = ("correctness", "clarity", "coherence")
     compare_to_baseline: bool = True
     baseline_model: str = "distilgpt2"
 
