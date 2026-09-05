@@ -2,11 +2,12 @@
 
 import logging
 import os
+import uuid
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from tiny_llm.api.schemas import GenerateRequest, GenerateResponse, HealthResponse
 from tiny_llm.config import load_config
@@ -29,6 +30,20 @@ loader = ModelLoader(
 )
 generator = Generator(loader)
 
+
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Add a request ID and baseline security headers to every response."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
 app = FastAPI(
     title="Tiny LLM Quantum Computing API",
     version="0.1.0",
@@ -41,6 +56,7 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestContextMiddleware)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)
@@ -77,14 +93,19 @@ def generate(request: GenerateRequest, http_request: Request) -> GenerateRespons
     except GenerationError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except Exception as exc:
-        LOGGER.exception("Inference failed for client %s", http_request.client)
+        LOGGER.exception(
+            "Inference failed request_id=%s client=%s",
+            http_request.state.request_id,
+            http_request.client,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="inference service is unavailable",
         ) from exc
 
     LOGGER.info(
-        "generation_completed prompt_tokens=%d generated_tokens=%d latency_ms=%.2f",
+        "generation_completed request_id=%s prompt_tokens=%d generated_tokens=%d latency_ms=%.2f",
+        http_request.state.request_id,
         result.prompt_tokens,
         result.tokens_generated,
         result.latency_ms,

@@ -3,7 +3,6 @@ Configuration management for Tiny LLM.
 Loads and validates all hyperparameters from config.yaml.
 """
 
-import os
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -166,10 +165,16 @@ def load_config(config_path: Optional[str] = None) -> Config:
         raise ValueError("Config file is empty")
     
     try:
+        data_config = DataConfig(**config_dict.get("data", {}))
+        if abs(
+            data_config.train_ratio + data_config.val_ratio + data_config.test_ratio - 1.0
+        ) > 1e-6:
+            raise ValueError("data split ratios must sum to 1.0")
+
         config = Config(
             model=ModelConfig(**config_dict.get("model", {})),
             training=TrainConfig(**config_dict.get("training", {})),
-            data=DataConfig(**config_dict.get("data", {})),
+            data=data_config,
             evaluation=EvalConfig(**config_dict.get("evaluation", {})),
             experiment_tracking=ExperimentConfig(**config_dict.get("experiment_tracking", {})),
             inference=InferenceConfig(**config_dict.get("inference", {})),
@@ -178,7 +183,7 @@ def load_config(config_path: Optional[str] = None) -> Config:
             paths=config_dict.get("paths", {})
         )
         return config
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         raise ValueError(f"Invalid config format: {e}")
 
 
