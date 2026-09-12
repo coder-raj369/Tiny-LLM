@@ -354,6 +354,19 @@ make format
 
 ---
 
+## Phase 4: Observability & Performance
+
+The API exposes process-local counters at `GET /metrics` in Prometheus text format. The collector tracks total requests, status codes, route counts, and cumulative latency without requiring a metrics database for local development.
+
+```bash
+# With the API running in another terminal
+python scripts/benchmark_api.py --requests 20
+```
+
+The benchmark reports mean, p50, p95 latency, and approximate throughput. Treat those values as machine-specific measurements; record them alongside the model checkpoint and request settings when comparing deployments.
+
+---
+
 ## Deployment (Phase 5+)
 
 ### Local Dev
@@ -395,11 +408,8 @@ docker-compose up
 
 ---
 
-## Next Steps (Phase 2–7)
+## Next Steps (Phase 5–7)
 
-- **Phase 2:** Inference server, API, Streamlit frontend
-- **Phase 3:** Testing, security, config management
-- **Phase 4:** Logging, observability
 - **Phase 5:** Docker Compose, CI/CD, cloud deployment (DigitalOcean)
 - **Phase 6:** Monitoring, alerting, error handling
 - **Phase 7:** Versioning, docs, continuous evaluation

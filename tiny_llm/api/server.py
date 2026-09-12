@@ -2,14 +2,16 @@
 
 import logging
 import os
+import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from tiny_llm.api.schemas import GenerateRequest, GenerateResponse, HealthResponse
+from tiny_llm.api.metrics import APIMetrics
 from tiny_llm.config import load_config
 from tiny_llm.inference import GenerationError, Generator, ModelLoader
 
@@ -29,15 +31,22 @@ loader = ModelLoader(
     device=DEVICE,
 )
 generator = Generator(loader)
+metrics = APIMetrics()
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """Add a request ID and baseline security headers to every response."""
 
     async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            metrics.observe(request.url.path, 500, (time.perf_counter() - start) * 1000)
+            raise
+        metrics.observe(request.url.path, response.status_code, (time.perf_counter() - start) * 1000)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -63,6 +72,12 @@ app.add_middleware(RequestContextMiddleware)
 def health() -> HealthResponse:
     """Liveness endpoint; it remains available before model artifacts are built."""
     return HealthResponse(status="ok", model_loaded=loader.is_loaded)
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics_endpoint() -> Response:
+    """Expose process-local metrics in Prometheus text format."""
+    return Response(content=metrics.prometheus_text(), media_type="text/plain; version=0.0.4")
 
 
 @app.get("/api/v1/ready", response_model=HealthResponse)

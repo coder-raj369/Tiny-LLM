@@ -27,6 +27,16 @@ def test_health_returns_request_id_and_security_headers():
     assert response.headers["Cache-Control"] == "no-store"
 
 
+def test_metrics_reports_handled_requests():
+    client.get("/metrics")
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "tiny_llm_http_requests_total" in response.text
+    assert 'tiny_llm_http_route_requests_total{route="/metrics"}' in response.text
+
+
 def test_generate_rejects_empty_prompt():
     response = client.post("/api/v1/generate", json={"prompt": ""})
 
