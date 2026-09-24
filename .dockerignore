@@ -1,0 +1,21 @@
+**/__pycache__
+**/*.py[cod]
+.git
+.github
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+.DS_Store
+*.log
+runs/
+logs/
+checkpoints/
+mlruns/
+
+# Keep local source files but exclude bulky generated files.
+**/.ipynb_checkpoints
+**/.DS_Store
